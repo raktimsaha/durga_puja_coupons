@@ -2,9 +2,9 @@ import pandas as pd
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm
+from reportlab.lib import colors
 
-# Config
-input_csv = "input.csv"  # change to your CSV filename
+input_csv = "input.csv"
 output_pdf = "coupons.pdf"
 page_width, page_height = A4
 
@@ -12,18 +12,37 @@ days = ['SASTHI', 'SAPTAMI', 'ASTHAMI', 'NABAMI']
 meal_types = ['BREAKFAST', 'LUNCH VEG', 'LUNCH NON VEG', 'DINNER VEG', 'DINNER NON VEG']
 
 def draw_coupon(c, x, y, flat_no, day, meal_type, width=70*mm, height=30*mm):
-    c.rect(x, y - height, width, height)
+    # Background color
+    if "NON VEG" in meal_type.upper():
+        bg_color = colors.red
+    else:
+        bg_color = colors.green
+    
+    # Draw background filled rectangle
+    c.setFillColor(bg_color)
+    c.rect(x, y - height, width, height, fill=1)
+    
+    # Draw border
+    c.setLineWidth(1)
+    c.setStrokeColor(colors.black)
+    c.rect(x, y - height, width, height, fill=0)
+    
     text_x = x + 5*mm
-    text_y = y - 10*mm
+    text_y = y - 8*mm
+    
+    # Logo text at top
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 6)
+    c.drawString(text_x, y - 6*mm, "Siddha Galaxia Phase 2 Durga Puja - 2025")
+    
+    # Coupon text
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(text_x, text_y, f"Flat No: {flat_no}")
-    c.drawString(text_x, text_y - 12, f"Day: {day}")
-    c.drawString(text_x, text_y - 24, f"Meal: {meal_type}")
+    c.drawString(text_x, text_y - 10, f"Flat No: {flat_no}")
+    c.drawString(text_x, text_y - 22, f"Day: {day}")
+    c.drawString(text_x, text_y - 34, f"Meal: {meal_type}")
 
 def main():
-    # Read CSV file
     df = pd.read_csv(input_csv)
-    
     c = canvas.Canvas(output_pdf, pagesize=A4)
     
     coupons_per_row = 3
@@ -38,6 +57,7 @@ def main():
         flat_no = row['FLAT NO']
         
         c.setFont("Helvetica-Bold", 16)
+        c.setFillColor(colors.black)
         c.drawCentredString(page_width / 2, page_height - 30, f"Coupons for Flat No: {flat_no}")
         
         coupon_count = 0
@@ -46,13 +66,18 @@ def main():
                 col_name = f"{day} {meal}"
                 if col_name in df.columns:
                     val = row[col_name]
-                    if pd.notna(val) and str(val).strip() != "" and str(val).strip() != "0":
-                        row_pos = coupon_count // coupons_per_row
-                        col_pos = coupon_count % coupons_per_row
-                        x = x_margin + col_pos * (coupon_width + x_spacing)
-                        y = page_height - y_margin - row_pos * (coupon_height + y_spacing)
-                        draw_coupon(c, x, y, flat_no, day.capitalize(), meal)
-                        coupon_count += 1
+                    if pd.notna(val):
+                        try:
+                            count = int(val)
+                        except:
+                            count = 0
+                        for _ in range(count):
+                            row_pos = coupon_count // coupons_per_row
+                            col_pos = coupon_count % coupons_per_row
+                            x = x_margin + col_pos * (coupon_width + x_spacing)
+                            y = page_height - y_margin - row_pos * (coupon_height + y_spacing)
+                            draw_coupon(c, x, y, flat_no, day.capitalize(), meal)
+                            coupon_count += 1
         
         c.showPage()
     
